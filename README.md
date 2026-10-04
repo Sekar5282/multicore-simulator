@@ -1,6 +1,6 @@
 ## 🚀 Live Demo
 
-👉 [Click here to open the Live Demo](https://link.api.hihoay.com/krq07l)
+👉 [Click here to open the Live Demo](https://weathered-wave-756.linkyhost.com)
 # Multicore CPU Parallel Processing Simulator
 
 A browser-based mini project demonstrating **parallel processing and multicore CPU scheduling**.
