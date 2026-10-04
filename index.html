@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multicore CPU Parallel Processing Simulator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="chip">CPU</div>
+    <div>
+      <h1>Multicore CPU Parallel Processing Simulator</h1>
+      <p>Visualize how an OS scheduler distributes tasks across multiple CPU cores.</p>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel controls">
+      <h2>Simulation Controls</h2>
+      <div class="control-grid">
+        <label>CPU Cores
+          <select id="coreCount">
+            <option>2</option><option selected>4</option><option>6</option><option>8</option>
+          </select>
+        </label>
+        <label>Number of Tasks
+          <input id="taskCount" type="number" min="2" max="20" value="8">
+        </label>
+        <label>Task Duration (seconds)
+          <input id="duration" type="number" min="0.5" max="5" step="0.5" value="2">
+        </label>
+      </div>
+      <div class="buttons">
+        <button id="startBtn">▶ Start Simulation</button>
+        <button id="pauseBtn" class="secondary" disabled>⏸ Pause</button>
+        <button id="resetBtn" class="secondary">↻ Reset</button>
+      </div>
+      <p class="hint">The simulation compares sequential single-core execution with parallel multicore execution.</p>
+    </section>
+
+    <section class="metrics">
+      <div class="metric"><span>Elapsed</span><strong id="elapsed">0.0 s</strong></div>
+      <div class="metric"><span>Completed</span><strong id="completed">0 / 8</strong></div>
+      <div class="metric"><span>Speedup</span><strong id="speedup">—</strong></div>
+      <div class="metric"><span>CPU Utilization</span><strong id="utilization">0%</strong></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-title">
+        <h2>Task Queue</h2>
+        <span id="status" class="status">Ready</span>
+      </div>
+      <div id="taskQueue" class="task-queue"></div>
+    </section>
+
+    <section class="panel">
+      <h2>OS Scheduler → CPU Cores</h2>
+      <p class="sub">The scheduler assigns waiting tasks to free cores. Each core executes one task at a time.</p>
+      <div id="cores" class="cores"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Execution Timeline</h2>
+      <div id="timeline" class="timeline"></div>
+    </section>
+
+    <section class="panel explanation">
+      <h2>What is happening?</h2>
+      <ol>
+        <li><b>Program starts:</b> tasks are created.</li>
+        <li><b>Task creation:</b> the workload is split into independent tasks.</li>
+        <li><b>Scheduling:</b> the OS scheduler places waiting tasks on available cores.</li>
+        <li><b>Parallel execution:</b> multiple cores execute different tasks at the same time.</li>
+        <li><b>Results combine:</b> completed tasks contribute to the final workload.</li>
+      </ol>
+      <div class="formula">
+        <b>Ideal speedup ≈ Single-core time ÷ Multicore time</b>
+        <span id="comparison">Run the simulation to see the measured result.</span>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Mini Project • Parallel Processing and Multicore CPUs • Educational Simulator
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
