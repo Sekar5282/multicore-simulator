@@ -1,0 +1,199 @@
+// Multicore CPU Parallel Processing Simulator
+
+class Task {
+  constructor(id, name, burstTime, priority = 1) {
+    this.id = id;
+    this.name = name;
+    this.burstTime = parseInt(burstTime);
+    this.remainingTime = parseInt(burstTime);
+    this.priority = parseInt(priority);
+    this.startTime = null;
+    this.completionTime = null;
+    this.waitingTime = 0;
+  }
+}
+
+class CPUCore {
+  constructor(id) {
+    this.id = id;
+    this.currentTask = null;
+    this.isBusy = false;
+    this.timeSliceCounter = 0;
+  }
+
+  assignTask(task) {
+    this.currentTask = task;
+    this.isBusy = true;
+    this.timeSliceCounter = 0;
+  }
+
+  releaseTask() {
+    const finishedTask = this.currentTask;
+    this.currentTask = null;
+    this.isBusy = false;
+    this.timeSliceCounter = 0;
+    return finishedTask;
+  }
+}
+
+class MulticoreSimulator {
+  constructor(coreCount = 4, algorithm = "FCFS", timeQuantum = 2) {
+    this.cores = Array.from({ length: coreCount }, (_, i) => new CPUCore(i + 1));
+    this.taskQueue = [];
+    this.completedTasks = [];
+    this.algorithm = algorithm; // FCFS, SJF, RR
+    this.timeQuantum = timeQuantum;
+    this.currentTime = 0;
+    this.isRunning = false;
+    this.timer = null;
+    this.taskIdCounter = 1;
+  }
+
+  addTask(name, burstTime, priority) {
+    const task = new Task(this.taskIdCounter++, name, burstTime, priority);
+    this.taskQueue.push(task);
+    this.sortQueue();
+    this.render();
+  }
+
+  sortQueue() {
+    if (this.algorithm === "SJF") {
+      this.taskQueue.sort((a, b) => a.remainingTime - b.remainingTime);
+    } else if (this.algorithm === "Priority") {
+      this.taskQueue.sort((a, b) => a.priority - b.priority);
+    }
+  }
+
+  start() {
+    if (this.isRunning) return;
+    this.isRunning = true;
+    this.timer = setInterval(() => this.tick(), 1000);
+  }
+
+  pause() {
+    this.isRunning = false;
+    clearInterval(this.timer);
+  }
+
+  reset() {
+    this.pause();
+    this.cores.forEach(core => core.releaseTask());
+    this.taskQueue = [];
+    this.completedTasks = [];
+    this.currentTime = 0;
+    this.taskIdCounter = 1;
+    this.render();
+  }
+
+  tick() {
+    this.currentTime++;
+
+    // 1. Process active tasks on each core
+    this.cores.forEach(core => {
+      if (core.isBusy) {
+        core.currentTask.remainingTime--;
+        core.timeSliceCounter++;
+
+        // Check if task completed
+        if (core.currentTask.remainingTime <= 0) {
+          const finished = core.releaseTask();
+          finished.completionTime = this.currentTime;
+          this.completedTasks.push(finished);
+        }
+        // Round Robin preemptive check
+        else if (this.algorithm === "RR" && core.timeSliceCounter >= this.timeQuantum) {
+          const preempted = core.releaseTask();
+          this.taskQueue.push(preempted); // re-queue remaining task
+        }
+      }
+    });
+
+    // 2. Assign waiting tasks to free cores
+    this.cores.forEach(core => {
+      if (!core.isBusy && this.taskQueue.length > 0) {
+        this.sortQueue();
+        const nextTask = this.taskQueue.shift();
+        if (nextTask.startTime === null) nextTask.startTime = this.currentTime;
+        core.assignTask(nextTask);
+      }
+    });
+
+    // 3. Update UI
+    this.render();
+  }
+
+  render() {
+    // Render Cores Status
+    const coresContainer = document.getElementById("cores-container");
+    if (coresContainer) {
+      coresContainer.innerHTML = this.cores.map(core => `
+        <div class="core-card ${core.isBusy ? 'busy' : 'idle'}">
+          <h4>Core ${core.id}</h4>
+          <p>Status: <strong>${core.isBusy ? 'BUSY' : 'IDLE'}</strong></p>
+          ${core.isBusy ? `
+            <p>Task: ${core.currentTask.name}</p>
+            <p>Remaining: ${core.currentTask.remainingTime}s</p>
+            <progress value="${core.currentTask.burstTime - core.currentTask.remainingTime}" max="${core.currentTask.burstTime}"></progress>
+          ` : '<p>No Task Running</p>'}
+        </div>
+      `).join("");
+    }
+
+    // Render Ready Queue
+    const queueContainer = document.getElementById("queue-container");
+    if (queueContainer) {
+      queueContainer.innerHTML = this.taskQueue.map(t => `
+        <div class="task-badge">
+          ${t.name} (Burst: ${t.remainingTime}s)
+        </div>
+      `).join("");
+    }
+
+    // Render Completed Tasks
+    const completedContainer = document.getElementById("completed-container");
+    if (completedContainer) {
+      completedContainer.innerHTML = this.completedTasks.map(t => `
+        <div>✔ ${t.name} (Finished at ${t.completionTime}s)</div>
+      `).join("");
+    }
+
+    // Render Time Elapsed
+    const timerDisplay = document.getElementById("timer");
+    if (timerDisplay) {
+      timerDisplay.textContent = `${this.currentTime}s`;
+    }
+  }
+}
+
+// Global instance initialization
+let simulator = new MulticoreSimulator();
+
+document.addEventListener("DOMContentLoaded", () => {
+  // Bind form and buttons
+  const taskForm = document.getElementById("task-form");
+  if (taskForm) {
+    taskForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const name = document.getElementById("task-name").value || `Task-${simulator.taskIdCounter}`;
+      const burstTime = document.getElementById("task-burst").value || 5;
+      const priority = document.getElementById("task-priority")?.value || 1;
+      simulator.addTask(name, burstTime, priority);
+      taskForm.reset();
+    });
+  }
+
+  document.getElementById("btn-start")?.addEventListener("click", () => simulator.start());
+  document.getElementById("btn-pause")?.addEventListener("click", () => simulator.pause());
+  document.getElementById("btn-reset")?.addEventListener("click", () => simulator.reset());
+
+  document.getElementById("algo-select")?.addEventListener("change", (e) => {
+    simulator.algorithm = e.target.value;
+  });
+
+  document.getElementById("core-select")?.addEventListener("change", (e) => {
+    const cores = parseInt(e.target.value);
+    simulator = new MulticoreSimulator(cores, simulator.algorithm);
+  });
+
+  simulator.render();
+});
